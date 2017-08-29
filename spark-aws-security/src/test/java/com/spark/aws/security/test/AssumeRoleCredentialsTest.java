@@ -50,7 +50,7 @@ import com.amazonaws.services.sqs.model.QueueDeletedRecentlyException;
 import com.amazonaws.util.EC2MetadataUtils;
 import com.amazonaws.util.StringUtils;
 import com.spark.aws.security.TemporaryCredentialsServiceLoader;
-import com.spark.aws.utils.AWSServiceConfig;
+import com.spark.aws.security.utils.AWSServiceConfig;
 
 /**
  * Assume Role Credentials Test

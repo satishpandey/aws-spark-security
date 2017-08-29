@@ -1,4 +1,4 @@
-package com.spark.aws.utils;
+package com.spark.aws.security.utils;
 
 import java.io.IOException;
 import java.io.InputStream;
