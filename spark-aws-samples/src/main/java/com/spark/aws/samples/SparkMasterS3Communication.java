@@ -44,7 +44,7 @@ public class SparkMasterS3Communication {
 	public static void main(String[] args) throws Exception {
 		String inputFile = args[0];
 		String outputFile = args[1];
-		String roleName = AWSServiceConfig.getInstance().getProperty("s3.bucket.name");
+		String roleName = AWSServiceConfig.getInstance().getProperty("s3.role.name");
 		TemporaryCredentialsServiceLoader serviceLoader = new TemporaryCredentialsServiceLoader();
 		AWSSecurityTokenService sts = serviceLoader.loadSTSClientFromInstanceRole();
 		String s3ServiceRoleArn = serviceLoader.prepareRoleArn(roleName);
