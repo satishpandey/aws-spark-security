@@ -43,7 +43,6 @@ public class S3WordCountNormalCredentials {
 		logger.debug(String.format("Input file: %s, Output file: %s", s3InputFile, s3OutputFile));
 		// Spark configuration
 		SparkConf conf = new SparkConf().setAppName(APPLICATION_NAME);
-		conf.setMaster("local[2]").set("spark.executor.memory", "1g");
 		JavaSparkContext sc = new JavaSparkContext(conf);
 		// AWS credentials configuration
 		Configuration configuration = sc.hadoopConfiguration();
