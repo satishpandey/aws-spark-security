@@ -47,8 +47,8 @@ public class S3WordCountNormalCredentials {
 		JavaSparkContext sc = new JavaSparkContext(conf);
 		// AWS credentials configuration
 		Configuration configuration = sc.hadoopConfiguration();
-		configuration.set("fs.s3a.access.key", "AKIAJIYHAXVHQBNHMW4Q");
-		configuration.set("fs.s3a.secret.key", "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");
+		configuration.set("fs.s3a.access.key", "<AWS-ACCESS-KEY>");
+		configuration.set("fs.s3a.secret.key", "<AWS-SECRET-KEY>");
 		// Fetching input data from S3 bucket
 		JavaRDD<String> s3InputRDD = sc.textFile(s3InputFile);
 		logger.info(String.format("Total number of lines to process: %d", s3InputRDD.count()));
