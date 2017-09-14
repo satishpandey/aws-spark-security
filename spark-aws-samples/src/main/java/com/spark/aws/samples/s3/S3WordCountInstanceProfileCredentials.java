@@ -3,6 +3,8 @@ package com.spark.aws.samples.s3;
 import java.util.Arrays;
 import java.util.Iterator;
 
+import javax.sound.midi.SysexMessage;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -82,5 +84,6 @@ public class S3WordCountInstanceProfileCredentials {
 		wordsCount.saveAsTextFile(s3OutputFile);
 		logger.debug(String.format("Exiting %s application....", APPLICATION_NAME));
 		sc.close();
+		System.exit(0);
 	}
 }

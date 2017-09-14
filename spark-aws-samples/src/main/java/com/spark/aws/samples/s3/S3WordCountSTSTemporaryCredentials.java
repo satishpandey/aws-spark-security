@@ -94,5 +94,6 @@ public class S3WordCountSTSTemporaryCredentials {
 		wordsCount.saveAsTextFile(s3OutputFile);
 		logger.debug(String.format("Exiting %s application....", APPLICATION_NAME));
 		sc.close();
+		System.exit(0);
 	}
 }
