@@ -3,8 +3,6 @@ package com.spark.aws.samples.s3;
 import java.util.Arrays;
 import java.util.Iterator;
 
-import javax.sound.midi.SysexMessage;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;

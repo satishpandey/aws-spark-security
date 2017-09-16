@@ -49,6 +49,8 @@ public class WebServerLogAnalysis {
 		JavaRDD<Tuple2<Row, Integer>> parsedLogsRDD = logs.filter(new FilterLogs(1));
 		logger.info(String.format("Number of successful parsed logs : %d", parsedLogsRDD.count()));
 		parsedLogsRDD.saveAsTextFile(outputFileLocation);
+		sc.close();
+		System.exit(0);
 	}
 
 	private static Function<String, Tuple2<Row, Integer>> prepareLogs = new Function<String, Tuple2<Row, Integer>>() {
