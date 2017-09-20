@@ -1,6 +1,7 @@
 package com.spark.aws.samples;
 
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Iterator;
 
 import org.apache.log4j.LogManager;
@@ -13,13 +14,14 @@ import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
 
+import scala.Tuple2;
+
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.util.EC2MetadataUtils;
+import com.amazonaws.util.json.Jackson;
 import com.spark.aws.security.TemporaryCredentialsServiceLoader;
 import com.spark.aws.security.utils.AWSServiceConfig;
-
-import scala.Tuple2;
 
 /**
  * 
@@ -30,14 +32,12 @@ public class SparkWorkerSQSCommunication {
 
 	private final static Logger logger = LogManager.getLogger(SparkWorkerSQSCommunication.class);
 
-	@SuppressWarnings({ "serial", "resource", "rawtypes" })
+	@SuppressWarnings({ "serial", "rawtypes" })
 	public static void main(String[] args) throws Exception {
 		String inputFile = args[0];
 		String outputFile = args[1];
-		// Create a Java Spark Context.
 		SparkConf conf = new SparkConf().setAppName("wordCount");
 		JavaSparkContext sc = new JavaSparkContext(conf);
-		// Load our input data.
 		JavaRDD<String> newRDD = sc.textFile(inputFile);
 		JavaRDD<String> input = newRDD.mapPartitions(new FlatMapFunction<Iterator<String>, String>() {
 			@Override
@@ -48,19 +48,21 @@ public class SparkWorkerSQSCommunication {
 				AWSServiceConfig awsServiceConfig = AWSServiceConfig.getInstance();
 				String sqsServiceRoleArn = serviceLoader.prepareRoleArn(awsServiceConfig.getProperty("sqs.role.name"));
 				AmazonSQS sqs = serviceLoader.loadAWSService(sts, sqsServiceRoleArn, AmazonSQS.class);
-				String queueMesg = "I am from worker machine : " + EC2MetadataUtils.getInstanceInfo().getInstanceId();
-				logger.info("Sending data to SQS queue : " + queueMesg);
-				sqs.sendMessage("SPARK-TEST-QUEUE", queueMesg);
+				ExecutorInfo executorInfo = new ExecutorInfo(EC2MetadataUtils.getInstanceId(), EC2MetadataUtils
+						.getPrivateIpAddress(), EC2MetadataUtils.getLocalHostName(), EC2MetadataUtils.getMacAddress(),
+						System.getenv().get("SPARK_EXECUTOR_DIRS"), System.getProperty("user.dir"), System.getenv()
+								.get("SPARK_LOG_URL_STDOUT"), System.getenv().get("SPARK_LOG_URL_STDERR"));
+				String sqsMessage = Jackson.toJsonString(executorInfo);
+				logger.info("Sending data to SQS queue : " + sqsMessage);
+				sqs.sendMessage("SPARK-TEST-QUEUE", sqsMessage);
 				return input;
 			}
 		});
-		// Split up into words.
 		JavaRDD<String> words = input.flatMap(new FlatMapFunction<String, String>() {
 			public Iterator<String> call(String x) {
 				return Arrays.asList(x.split(" ")).iterator();
 			}
 		});
-		// Transform into word and count.
 		JavaPairRDD<String, Integer> counts = words.mapToPair(new PairFunction<String, String, Integer>() {
 			@SuppressWarnings("unchecked")
 			public Tuple2<String, Integer> call(String x) {
@@ -71,8 +73,106 @@ public class SparkWorkerSQSCommunication {
 				return x + y;
 			}
 		});
-		// Save the word count back out to a text file, causing evaluation.
 		counts.saveAsTextFile(outputFile);
+		sc.close();
+		System.exit(0);
 	}
 
+	static class ExecutorInfo {
+		private Date createdDateTime;
+		private String instanceId;
+		private String privateIp;
+		private String localAddress;
+		private String macAddress;
+		private String executorDir;
+		private String userDir;
+		private String logUrlStdout;
+		private String logUrlStderr;
+
+		public ExecutorInfo() {
+			createdDateTime = new Date();
+		}
+
+		public ExecutorInfo(String instanceId, String privateIp, String localAddress, String macAddress,
+				String executorDir, String userDir, String logUrlStdout, String logUrlStderr) {
+			this();
+			this.instanceId = instanceId;
+			this.privateIp = privateIp;
+			this.localAddress = localAddress;
+			this.macAddress = macAddress;
+			this.executorDir = executorDir;
+			this.userDir = userDir;
+			this.logUrlStdout = logUrlStdout;
+			this.logUrlStderr = logUrlStderr;
+		}
+
+		public String getInstanceId() {
+			return instanceId;
+		}
+
+		public void setInstanceId(String instanceId) {
+			this.instanceId = instanceId;
+		}
+
+		public String getPrivateIp() {
+			return privateIp;
+		}
+
+		public void setPrivateIp(String privateIp) {
+			this.privateIp = privateIp;
+		}
+
+		public String getLocalAddress() {
+			return localAddress;
+		}
+
+		public void setLocalAddress(String localAddress) {
+			this.localAddress = localAddress;
+		}
+
+		public String getMacAddress() {
+			return macAddress;
+		}
+
+		public void setMacAddress(String macAddress) {
+			this.macAddress = macAddress;
+		}
+
+		public String getExecutorDir() {
+			return executorDir;
+		}
+
+		public void setExecutorDir(String executorDir) {
+			this.executorDir = executorDir;
+		}
+
+		public String getUserDir() {
+			return userDir;
+		}
+
+		public void setUserDir(String userDir) {
+			this.userDir = userDir;
+		}
+
+		public String getLogUrlStdout() {
+			return logUrlStdout;
+		}
+
+		public void setLogUrlStdout(String logUrlStdout) {
+			this.logUrlStdout = logUrlStdout;
+		}
+
+		public String getLogUrlStderr() {
+			return logUrlStderr;
+		}
+
+		public void setLogUrlStderr(String logUrlStderr) {
+			this.logUrlStderr = logUrlStderr;
+		}
+
+		public Date getCreatedDateTime() {
+			return createdDateTime;
+		}
+
+	}
 }
