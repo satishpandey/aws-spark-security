@@ -16,8 +16,12 @@ import org.apache.spark.api.java.function.PairFunction;
 
 import scala.Tuple2;
 
+import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.util.EC2MetadataUtils;
 import com.amazonaws.util.json.Jackson;
 import com.spark.aws.security.TemporaryCredentialsServiceLoader;
@@ -31,6 +35,9 @@ import com.spark.aws.security.utils.AWSServiceConfig;
 public class SparkWorkerSQSCommunication {
 
 	private final static Logger logger = LogManager.getLogger(SparkWorkerSQSCommunication.class);
+	private final static String accountId = EC2MetadataUtils.getInstanceInfo().getAccountId();
+	// RoleArn template
+	private final static String roleArnTemplate = String.format("arn:aws:iam::%s:role/%s", accountId, "%s");
 
 	@SuppressWarnings({ "serial", "rawtypes" })
 	public static void main(String[] args) throws Exception {
@@ -43,11 +50,15 @@ public class SparkWorkerSQSCommunication {
 			@Override
 			public Iterator<String> call(Iterator<String> input) throws Exception {
 				logger.debug("Loading temporary credentials...");
-				TemporaryCredentialsServiceLoader serviceLoader = new TemporaryCredentialsServiceLoader();
-				AWSSecurityTokenService sts = serviceLoader.loadSTSClientFromInstanceRole();
-				AWSServiceConfig awsServiceConfig = AWSServiceConfig.getInstance();
-				String sqsServiceRoleArn = serviceLoader.prepareRoleArn(awsServiceConfig.getProperty("sqs.role.name"));
-				AmazonSQS sqs = serviceLoader.loadAWSService(sts, sqsServiceRoleArn, AmazonSQS.class);
+				String roleName = "S3TempAccessRole";
+				String roleSessionName = roleName + "Session";
+				String roleArn = String.format(roleArnTemplate, roleName);
+				InstanceProfileCredentialsProvider credentialsProvider = new InstanceProfileCredentialsProvider(true);
+				AWSSecurityTokenService sts = AWSSecurityTokenServiceClientBuilder.standard()
+						.withCredentials(credentialsProvider).build();
+				STSAssumeRoleSessionCredentialsProvider provider = new STSAssumeRoleSessionCredentialsProvider.Builder(
+						roleArn, roleSessionName).withStsClient(sts).build();
+				AmazonSQS sqs = AmazonSQSClientBuilder.standard().withCredentials(provider).build();
 				ExecutorInfo executorInfo = new ExecutorInfo(EC2MetadataUtils.getInstanceId(), EC2MetadataUtils
 						.getPrivateIpAddress(), EC2MetadataUtils.getLocalHostName(), EC2MetadataUtils.getMacAddress(),
 						System.getenv().get("SPARK_EXECUTOR_DIRS"), System.getProperty("user.dir"), System.getenv()
